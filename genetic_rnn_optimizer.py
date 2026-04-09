@@ -29,6 +29,14 @@ import json
 # 5) Keep data import as X_way1/y_way1 or X_way2/y_way2 (both are multiclass labels)
 #    No label remapping is needed in multiclass mode
 
+
+# Potential improvement areas:
+# - Add more metrics to `fitness()` (precision/recall/AUROC) instead of relying mainly on F1
+# - Increase population size and generations once the pipeline is stable
+# - Add elitism/selection tuning, crossover, and mutation probability controls
+# - Consider using a fixed validation split seed and multiple runs to reduce randomness
+# - Could improve training time since it's pretty expensive; cache evaluated chromosomes or reduce epoch count adaptively(?)
+
 # Import preprocessed data from existing data extraction module
 # Note: You can switch between the two resampling methods by commenting/uncommenting the appropriate import line below
 # from data_extract_resample import X_way1 as X, y_way1 as y
@@ -43,6 +51,7 @@ SEARCH_SPACE = {
     # These are just placeholder values I threw together for initial testing
     # These aren't necessarily the best choices, but they give us a starting point to see if the GA is working and improving over generations
     # Could reference the paper on hyperparam tuning but I forget if they mentioned the specific ranges they used for the RNN architecture
+    # NOTE: (Improvement idea): expand this search space later with dropout lower/higher values, different learning rates, and possibly batch size
     'window_size': [180, 240, 360], 
     'units': [32, 64, 128],        
     'dropout': [0.2, 0.3, 0.5],    
@@ -52,6 +61,7 @@ SEARCH_SPACE = {
 # --- MODEL BUILDER ---
 def build_ga_model(chromosome, num_classes=2):
     # Translates a dictionary of genes into a Keras model
+    # NOTE: Need to edit here for multiclass vs binary since the output layer and loss function will differ based on the number of classes
     win = int(chromosome['window_size'])
     uni = int(chromosome['units'])
     drop = chromosome['dropout']
@@ -71,6 +81,7 @@ def build_ga_model(chromosome, num_classes=2):
     # Input -> BiLSTM (64 units) -> Dropout -> LSTM (32 units) -> Dropout -> Dense (32) -> Output
     # The architecture is set to be flexible for both binary and multiclass by adjusting the final layer and loss function based on the num_classes parameter
     # For the GA, I set num_classes=2 for binary evaluation, but the same function can be used with num_classes=5 for multiclass if we switch the active blocks in the code
+    # NOTE: (Improvement idea): add batch normalization or a lighter model variant if training becomes too slow(?); could also experiment with different architectures as part of the GA search space later on
     model = Sequential([
         # Input shape is (window_size, 1) - the GA will adjust the window size based on the chromosome
         Input(shape=(win, 1)),
@@ -103,6 +114,7 @@ class GeneticOptimizer:
     def fitness(self, chromosome, X_train, y_train, X_val, y_val):
         # Evaluation focused on abnormal-vs-normal detection (binary F1) since that's what we're focusing on 
         # The GA will try to maximize this score, so we weight the abnormal F1 more heavily than the overall macro F1 to encourage better performance
+        # This is the main scoring function - might need to change stuff here when switching to multiclass, since the evaluation metrics and objectives might differ (e.g., we might want to optimize for macro F1 or a specific class F1 instead of just the abnormal class)
         try:
             # Re-slice data to match the chromosome's window size
             # Basically just to ensure that the model is always trained and evaluated on the same window size that it's designed for based on the chromosome, since the GA is optimizing the window size as well
@@ -134,7 +146,8 @@ class GeneticOptimizer:
             f1_abnormal = f1_score(y_val, y_pred, labels=[1], average='macro', zero_division=0)
             
             # The weights here can be adjusted based on how much we want to prioritize overall balanced performance (macro F1) versus specifically improving the abnormal detection (abnormal F1) 
-            # In this case, I set it to 40% macro and 60% abnormal to encourage better performance on the abnormal class while still considering overall performance
+            # In this case, I set it to 40% macro and 60% abnormal to encourage better performance on the abnormal class while still considering overall performance (was kinda just freeballing the weights here, could experiment with different values to see how it affects the evolution)
+            # NOTE: (Improvement idea): try a more formal validation objective like (F1 + recall penalty) if missing abnormalities is a bigger concern than false positives, or figure out some metric that heavily penalizes false negatives in the abnormal class
             weighted_score = (f1_macro * 0.4) + (f1_abnormal * 0.6)
             return weighted_score
         
@@ -143,7 +156,12 @@ class GeneticOptimizer:
             return 0
 
     def evolve(self, scores):
-        # Selection, Crossover, and Mutation 
+        # Evolutionary loop: Selection, Crossover, and Mutation 
+        # I think tuning these steps probably matters more than smaller architecture changes 
+        # I have it doing a very basic selection of the top 2 performers and then creating children by mutating one gene from the best performers until we fill the new population 
+        # (This is a very rudimentary form of elitism + mutation) 
+        # Might wanna look into this more - I did see stuff like tournament selection, uniform crossover, or adding mutation probabilities instead of always mutating one gene
+        # NOTE: (Improvement idea): add explicit mutation/crossover probabilities instead of always mutating exactly one gene.
 
         # Selection: Keep top 2
         sorted_indices = np.argsort(scores)[::-1]
@@ -167,6 +185,9 @@ if __name__ == "__main__":
     # IMPORT DATA (Assuming it exists in the specified format from the data extraction module)
     # from data_extract_resample import X_way2, y_way2
     # For now, we'll assume X_way2 and y_way2 are loaded
+    # NOTE: (Improvement idea - not really GA related but for the file itself): 
+    #   Add a command-line flag or config switch here so binary/multiclass can be selected without editing code :^)
+    #   Should probably find a way to do this for all of them tbh but this one's probably the most important since it affects the data loading, model architecture, and evaluation logic all at once
     
     # --- MULTICLASS VERSION ---
     # X_train, X_val, y_train, y_val = train_test_split(
