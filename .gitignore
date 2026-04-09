@@ -1,0 +1,20 @@
+# Python cache
+__pycache__/
+*.py[cod]
+
+# .vscode Settings
+.vscode/
+
+# Python Virtual Environment
+venv/
+.venv/
+env/
+ENV/
+
+# MIT-BIH Dataset folder
+data/
+# Specifically ignore common medical data formats just in case
+*.dat
+*.hea
+*.atr
+*.bin

@@ -1,0 +1,6 @@
+# Auto detect text files and perform LF normalization
+* text=auto
+
+# Don't touch my json files stupid git
+*.json -text
+*.json eol=lf
