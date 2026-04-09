@@ -17,27 +17,40 @@
         
 
 # Steps to run the suite
-py -3.12 -m venv venv
-.\venv\Scripts\Activate.ps1
-py --version (to check)
+> py -3.12 -m venv venv
+
+> .\venv\Scripts\Activate.ps1
+
+To Check:
+> py --version
+
+Installing Dependencies:
+> pip install tensorflow wfdb scikit-learn imbalanced-learn pandas numpy seaborn
 
 
-pip install tensorflow wfdb scikit-learn imbalanced-learn pandas numpy seaborn
+Data Extract:
 
-
-Data Extract
     py .\data_extract_resample.py
-    (Undersample or Cap + SMOTE)
-Test Making a RNN model
+(Undersample or Cap + SMOTE)
+    
+Test Making a RNN model:
+
     py .\rnn_model.py
-    (Shows model architecture with details)
+    
+(Shows model architecture with details)
+    
 Experimental GA RNN (idk what I'm doing here)
+
     py .\genetic_rnn_optimizer.py
-    (This takes a fat minute and a half so don't run it on your laptop's hardware)
+    
+(This takes a fat minute and a half so don't run it on your laptop's hardware)
+    
 The main thing to run a full suite
+
     py .\main.py
     
 Testing
+
     py .\test_script.py
     py .\batch_test.py
 
