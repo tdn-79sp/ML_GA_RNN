@@ -6,6 +6,10 @@ from sklearn.model_selection import train_test_split
 from tensorflow.keras.callbacks import ReduceLROnPlateau
 from sklearn.utils import class_weight
 
+import tensorflow as tf
+
+tf.config.threading.set_intra_op_parallelism_threads(16)
+tf.config.threading.set_inter_op_parallelism_threads(8)
 # ============================================================
 # HOW TO SWITCH BACK TO MULTICLASS (N, L, R, V, A)
 # ============================================================
@@ -68,6 +72,10 @@ win_size = int(best_params['window_size'])
 n_units = int(best_params['units'])
 drop_rate = float(best_params['dropout'])
 learning_rate = float(best_params['lr'])
+batch_size = int(best_params['batch_size'])
+activation = best_params.get('activation', 'relu')
+optimizer = best_params.get('optimizer', 'adam')
+
 
 # Slice data to match the GA's discovered optimal window
 X_sliced = X[:, :win_size, :] 
@@ -103,7 +111,9 @@ model = build_base_rnn(
     num_classes=2,
     units=n_units,
     dropout=drop_rate,
-    lr=learning_rate
+    lr=learning_rate,
+    activation=activation,
+    optimizer=optimizer
 )
 
 if USE_WEIGHTS: 
@@ -128,7 +138,7 @@ lr_reducer = ReduceLROnPlateau(monitor='val_loss', factor=0.5, patience=5, min_l
 history = model.fit(
     X_train, y_train,
     epochs=20,
-    batch_size=32,
+    batch_size=batch_size,
     validation_data=(X_val, y_val),
     # class_weight=class_weights_dict if USE_WEIGHTS else None, # This will apply the correct weights for whichever data imported
     class_weight=active_class_weights,
@@ -145,29 +155,73 @@ print("\n" + "="*30)
 print("FINAL EVALUATION ON REAL TEST DATA")
 print("="*30)
 test_results = model.evaluate(X_test_final_sliced, y_test_eval, verbose=1)
-print(f"Binary Test Accuracy (Normal vs Abnormal): {test_results[1]*100:.2f}%")
+#print(f"Binary Test Accuracy (Normal vs Abnormal): {test_results[1]*100:.2f}%")
+print(f"Binary Test Loss: {test_results[0]:.4f}")
+print(f"Binary Test Accuracy: {test_results[1]*100:.2f}%")
+print(f"Binary Test Precision: {test_results[2]*100:.2f}%")
+print(f"Binary Test Recall: {test_results[3]*100:.2f}%")
 
 # Live Plotting the Results
-def plot_history(history):
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(15, 5))
+# def plot_history(history):
+#     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(15, 5))
 
-    # Loss Plot
-    ax1.plot(history.history['loss'], label='Train Loss', color='#e74c3c')
-    ax1.plot(history.history['val_loss'], label='Val Loss', color='#c0392b', linestyle='--')
-    ax1.set_title('Model Loss (Cross-Entropy)')
+#     # Loss Plot
+#     ax1.plot(history.history['loss'], label='Train Loss', color='#e74c3c')
+#     ax1.plot(history.history['val_loss'], label='Val Loss', color='#c0392b', linestyle='--')
+#     ax1.set_title('Model Loss (Cross-Entropy)')
+#     ax1.set_xlabel('Epoch')
+#     ax1.set_ylabel('Loss')
+#     ax1.legend()
+#     ax1.grid(True, alpha=0.3)
+
+#     # Accuracy Plot
+#     ax2.plot(history.history['accuracy'], label='Train Acc', color='#2ecc71')
+#     ax2.plot(history.history['val_accuracy'], label='Val Acc', color='#27ae60', linestyle='--')
+#     ax2.set_title('Model Accuracy')
+#     ax2.set_xlabel('Epoch')
+#     ax2.set_ylabel('Accuracy')
+#     ax2.legend()
+#     ax2.grid(True, alpha=0.3)
+
+#     plt.tight_layout()
+#     plt.show()
+
+def plot_history(history):
+    fig, axes = plt.subplots(2, 2, figsize=(14, 10))
+
+    ax1, ax2, ax3, ax4 = axes.flatten()
+
+    ax1.plot(history.history['loss'], label='Train Loss')
+    ax1.plot(history.history['val_loss'], label='Val Loss', linestyle='--')
+    ax1.set_title('Model Loss')
     ax1.set_xlabel('Epoch')
     ax1.set_ylabel('Loss')
     ax1.legend()
     ax1.grid(True, alpha=0.3)
 
-    # Accuracy Plot
-    ax2.plot(history.history['accuracy'], label='Train Acc', color='#2ecc71')
-    ax2.plot(history.history['val_accuracy'], label='Val Acc', color='#27ae60', linestyle='--')
+    ax2.plot(history.history['accuracy'], label='Train Accuracy')
+    ax2.plot(history.history['val_accuracy'], label='Val Accuracy', linestyle='--')
     ax2.set_title('Model Accuracy')
     ax2.set_xlabel('Epoch')
     ax2.set_ylabel('Accuracy')
     ax2.legend()
     ax2.grid(True, alpha=0.3)
+
+    ax3.plot(history.history['precision'], label='Train Precision')
+    ax3.plot(history.history['val_precision'], label='Val Precision', linestyle='--')
+    ax3.set_title('Model Precision')
+    ax3.set_xlabel('Epoch')
+    ax3.set_ylabel('Precision')
+    ax3.legend()
+    ax3.grid(True, alpha=0.3)
+
+    ax4.plot(history.history['recall'], label='Train Recall')
+    ax4.plot(history.history['val_recall'], label='Val Recall', linestyle='--')
+    ax4.set_title('Model Recall')
+    ax4.set_xlabel('Epoch')
+    ax4.set_ylabel('Recall')
+    ax4.legend()
+    ax4.grid(True, alpha=0.3)
 
     plt.tight_layout()
     plt.show()

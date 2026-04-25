@@ -16,7 +16,7 @@ from tensorflow.keras.layers import LSTM, Dense, Dropout, Bidirectional, Input
 
 # Model architecture flexlible for both binary and multiclass classification
 # Have it set so that output layer and loss function automatically adjust based on num_classes
-def build_base_rnn(input_shape, num_classes=5, units=64, dropout=0.3, lr=0.001):    
+def build_base_rnn(input_shape, num_classes=5, units=64, dropout=0.3, lr=0.001, activation='relu', optimizer='adam'):    
     # Determine if we're in binary or multiclass mode based on num_classes
     is_binary = num_classes == 2
     output_units = 1 if is_binary else num_classes
@@ -37,7 +37,7 @@ def build_base_rnn(input_shape, num_classes=5, units=64, dropout=0.3, lr=0.001):
         Dropout(dropout),
         
         # Hidden Dense layer for feature interpretation
-        Dense(32, activation='relu'),
+        Dense(32, activation=activation),
         
         # Output layer switches automatically for binary vs multiclass
         Dense(output_units, activation=output_activation)
@@ -50,8 +50,20 @@ def build_base_rnn(input_shape, num_classes=5, units=64, dropout=0.3, lr=0.001):
         loss = 'sparse_categorical_crossentropy'
         metrics = [tf.keras.metrics.SparseCategoricalAccuracy(name='accuracy')]
     
+    # Choose Optimizer
+    if optimizer == 'adam':
+        opt=tf.keras.optimizers.Adam(learning_rate=lr)
+    elif optimizer == 'rmsprop':
+        opt=tf.keras.optimizers.RMSprop(learning_rate=lr)
+    elif optimizer == 'adamax':
+        opt=tf.keras.optimizers.Adamax(learning_rate=lr)
+    elif optimizer == 'nadam':
+        opt=tf.keras.optimizers.Nadam(learning_rate=lr)
+    else:
+        opt=tf.keras.optimizers.Adam(learning_rate=lr)
+        
     model.compile(
-        optimizer=tf.keras.optimizers.Adam(learning_rate=lr),
+        optimizer=opt,
         loss=loss,
         metrics=metrics
     )

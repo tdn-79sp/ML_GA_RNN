@@ -10,7 +10,7 @@ from collections import Counter
 from sklearn.utils import class_weight
 
 # Configuration
-DATA_PATH = 'data/' 
+DATA_PATH = 'data/'
 WINDOW_SIZE = 180    
 RECORDS = ['100', '101', '103', '105', '106', '108', '111'] # Expand as needed
 

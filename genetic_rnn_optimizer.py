@@ -7,6 +7,13 @@ from sklearn.metrics import f1_score
 from sklearn.model_selection import train_test_split
 import json
 
+import os
+
+os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
+
+tf.config.threading.set_intra_op_parallelism_threads(16)
+tf.config.threading.set_inter_op_parallelism_threads(8)
+
 # ============================================================
 # HOW TO SWITCH BACK TO MULTICLASS (N, L, R, V, A)
 # ============================================================
@@ -55,7 +62,10 @@ SEARCH_SPACE = {
     'window_size': [180, 240, 360], 
     'units': [32, 64, 128],        
     'dropout': [0.2, 0.3, 0.5],    
-    'lr': [0.001, 0.0001]          
+    'lr': [0.001, 0.0001],
+    'batch_size': [32, 64, 128, 256, 512],
+    'activation': ['relu', 'elu', 'tanh', 'sigmoid'],
+    'optimizer': ['adam', 'rmsprop','adamax', 'nadam']
 }
 
 # --- MODEL BUILDER ---
@@ -66,6 +76,8 @@ def build_ga_model(chromosome, num_classes=2):
     uni = int(chromosome['units'])
     drop = chromosome['dropout']
     lr = chromosome['lr']
+    act = chromosome['activation']
+    opt = chromosome['optimizer']
 
     # --- MULTICLASS VERSION ---
     # output_units = num_classes
@@ -76,6 +88,21 @@ def build_ga_model(chromosome, num_classes=2):
     output_units = 1
     output_activation = 'sigmoid'
     loss_name = 'binary_crossentropy'
+
+    # Choose Optimizer
+    if opt == 'adam':
+        optimizer=tf.keras.optimizers.Adam(learning_rate=lr)
+    elif opt == 'rmsprop':
+        optimizer=tf.keras.optimizers.RMSprop(learning_rate=lr)
+    elif opt == 'adamax':
+        optimizer=tf.keras.optimizers.Adamax(learning_rate=lr)
+    elif opt == 'nadam':
+        optimizer=tf.keras.optimizers.Nadam(learning_rate=lr)
+    else:
+        optimizer=tf.keras.optimizers.Adam(learning_rate=lr)
+
+
+    metrics = ['accuracy', tf.keras.metrics.Precision(name='precision'), tf.keras.metrics.Recall(name='recall')]
 
     # Model Architecture 180 -> 64 -> 32 -> output with dropout in between
     # Input -> BiLSTM (64 units) -> Dropout -> LSTM (32 units) -> Dropout -> Dense (32) -> Output
@@ -88,14 +115,14 @@ def build_ga_model(chromosome, num_classes=2):
         Bidirectional(LSTM(uni, return_sequences=True)),
         Dropout(drop),
         LSTM(uni // 2), # Second LSTM layer with half the units of the first
-        Dense(32, activation='relu'), # Hidden Dense layer for feature interpretation
+        Dense(32, activation=act), # Hidden Dense layer for feature interpretation
         Dense(output_units, activation=output_activation) # Output layer adjusts based on binary vs multiclass
     ])
     
     model.compile(
-        optimizer=tf.keras.optimizers.Adam(learning_rate=lr),
+        optimizer=optimizer,
         loss=loss_name,
-        metrics=['accuracy'] # Should probably add more metrics to track here but again just a rough initial version
+        metrics=metrics # Should probably add more metrics to track here but again just a rough initial version
     )
     return model
 
@@ -119,13 +146,14 @@ class GeneticOptimizer:
             # Re-slice data to match the chromosome's window size
             # Basically just to ensure that the model is always trained and evaluated on the same window size that it's designed for based on the chromosome, since the GA is optimizing the window size as well
             win = chromosome['window_size']
+            bs = chromosome['batch_size']
             X_t = X_train[:, :win, :]
             X_v = X_val[:, :win, :]
 
             model = build_ga_model(chromosome)
             
             # Somewhat "fast" training for evaluation (3 epochs is enough to see potential) but it takes a fat minute 
-            model.fit(X_t, y_train, epochs=3, batch_size=64, verbose=0)
+            model.fit(X_t, y_train, epochs=5, batch_size=bs, verbose=0)
 
             # --- MULTICLASS VERSION ---
             # y_pred = np.argmax(model.predict(X_v, verbose=0), axis=1)
@@ -201,8 +229,8 @@ if __name__ == "__main__":
     )
 
     # Initialize GA and evolve over generations
-    ga = GeneticOptimizer(population_size=6)
-    num_generations = 3
+    ga = GeneticOptimizer(population_size=20)
+    num_generations = 10
 
     print(f"Starting Genetic Evolution for {num_generations} generations...")
 
