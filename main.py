@@ -8,8 +8,10 @@ from sklearn.utils import class_weight
 
 import tensorflow as tf
 
-tf.config.threading.set_intra_op_parallelism_threads(16)
-tf.config.threading.set_inter_op_parallelism_threads(8)
+# improve CPU performance
+# tf.config.threading.set_intra_op_parallelism_threads(16)
+# tf.config.threading.set_inter_op_parallelism_threads(8)
+
 # ============================================================
 # HOW TO SWITCH BACK TO MULTICLASS (N, L, R, V, A)
 # ============================================================

@@ -1,1 +1,1 @@
-{"window_size": 180, "units": 32, "dropout": 0.3, "lr": 0.001, "batch_size": 64, "activation": "sigmoid", "optimizer": "nadam"}
+{"window_size": 180, "units": 256, "dropout": 0.2, "lr": 0.001, "batch_size": 16, "activation": "tanh", "optimizer": "adamax"}

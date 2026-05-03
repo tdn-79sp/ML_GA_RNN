@@ -7,12 +7,12 @@ from sklearn.metrics import f1_score
 from sklearn.model_selection import train_test_split
 import json
 
-import os
+# import os
 
-os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
+# os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
 
-tf.config.threading.set_intra_op_parallelism_threads(16)
-tf.config.threading.set_inter_op_parallelism_threads(8)
+# tf.config.threading.set_intra_op_parallelism_threads(16)
+# tf.config.threading.set_inter_op_parallelism_threads(8)
 
 # ============================================================
 # HOW TO SWITCH BACK TO MULTICLASS (N, L, R, V, A)
@@ -59,11 +59,11 @@ SEARCH_SPACE = {
     # These aren't necessarily the best choices, but they give us a starting point to see if the GA is working and improving over generations
     # Could reference the paper on hyperparam tuning but I forget if they mentioned the specific ranges they used for the RNN architecture
     # NOTE: (Improvement idea): expand this search space later with dropout lower/higher values, different learning rates, and possibly batch size
-    'window_size': [180, 240, 360], 
-    'units': [32, 64, 128],        
+    'window_size': [180, 240, 252, 360], 
+    'units': [32, 64, 128, 256],        
     'dropout': [0.2, 0.3, 0.5],    
-    'lr': [0.001, 0.0001],
-    'batch_size': [32, 64, 128, 256, 512],
+    'lr': [0.01, 0.001, 0.0001],
+    'batch_size': [16, 32, 64, 128, 256, 512],
     'activation': ['relu', 'elu', 'tanh', 'sigmoid'],
     'optimizer': ['adam', 'rmsprop','adamax', 'nadam']
 }
@@ -229,7 +229,7 @@ if __name__ == "__main__":
     )
 
     # Initialize GA and evolve over generations
-    ga = GeneticOptimizer(population_size=20)
+    ga = GeneticOptimizer(population_size=30)
     num_generations = 10
 
     print(f"Starting Genetic Evolution for {num_generations} generations...")

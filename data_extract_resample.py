@@ -11,8 +11,8 @@ from sklearn.utils import class_weight
 
 # Configuration
 DATA_PATH = 'data/'
-WINDOW_SIZE = 180    
-RECORDS = ['100', '101', '103', '105', '106', '108', '111'] # Expand as needed
+WINDOW_SIZE = 252    
+RECORDS = ['100', '101', '103', '105', '106', '108', '111', '113', '115', '117', '119', '122', '124', '201','203', '207', '209', '212', '214', '217', '220', '222', '228', '231', '233'] # Expand as needed
 
 # Define which symbols we care about
 # N: Normal, L: Left Bundle, R: Right Bundle, V: Ventricular, A: Atrial
